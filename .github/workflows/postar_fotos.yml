@@ -1,0 +1,34 @@
+name: Postar Fotos
+
+on:
+  schedule:
+    # Executa todo dia às 10h (horário UTC = -3h do Brasil)
+    # 10h BR = 13h UTC
+    - cron: '0 13 * * *'
+  workflow_dispatch: # Permite executar manualmente
+
+jobs:
+  postar:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v3
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Instalar dependências
+      run: |
+        pip install -r requirements.txt
+    
+    - name: Executar automação de fotos
+      env:
+        FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+        INSTAGRAM_ID: ${{ secrets.INSTAGRAM_ID }}
+        PINTEREST_TOKEN: ${{ secrets.PINTEREST_TOKEN }}
+      run: |
+        python automacao_fotos.py
