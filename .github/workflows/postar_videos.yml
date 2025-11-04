@@ -1,79 +1,33 @@
-def postar_video_facebook(ebook, mensagem, video_path):
-    """Posta vídeo no Facebook usando upload resumable"""
-    try:
-        print(f"\n📤 Iniciando upload no Facebook...")
-        
-        # Passo 1: Iniciar sessão de upload
-        init_url = f'https://graph.facebook.com/v24.0/{PAGE_ID}/videos'
-        
-        file_size = os.path.getsize(video_path)
-        
-        init_payload = {
-            'upload_phase': 'start',
-            'file_size': file_size,
-            'access_token': ACCESS_TOKEN
-        }
-        
-        init_response = requests.post(init_url, data=init_payload, timeout=30)
-        
-        if init_response.status_code != 200:
-            print(f'❌ Erro ao iniciar upload: {init_response.json()}')
-            return False
-        
-        upload_session_id = init_response.json().get('upload_session_id')
-        video_id = init_response.json().get('video_id')
-        
-        print(f"   ✅ Sessão iniciada: {upload_session_id}")
-        
-        # Passo 2: Upload do arquivo
-        print(f"   📤 Fazendo upload ({file_size} bytes)...")
-        
-        with open(video_path, 'rb') as video_file:
-            transfer_payload = {
-                'upload_phase': 'transfer',
-                'upload_session_id': upload_session_id,
-                'start_offset': 0,
-                'access_token': ACCESS_TOKEN
-            }
-            
-            files = {'video_file_chunk': video_file}
-            
-            transfer_response = requests.post(
-                init_url,
-                data=transfer_payload,
-                files=files,
-                timeout=180
-            )
-        
-        if transfer_response.status_code != 200:
-            print(f'❌ Erro no upload: {transfer_response.json()}')
-            return False
-        
-        print(f"   ✅ Upload concluído")
-        
-        # Passo 3: Finalizar e publicar
-        print(f"   📢 Publicando...")
-        
-        finish_payload = {
-            'upload_phase': 'finish',
-            'upload_session_id': upload_session_id,
-            'description': mensagem,
-            'access_token': ACCESS_TOKEN
-        }
-        
-        finish_response = requests.post(init_url, data=finish_payload, timeout=30)
-        
-        if finish_response.status_code == 200:
-            result = finish_response.json()
-            print(f'✅ Vídeo publicado!')
-            print(f'   Sucesso: {result.get("success")}')
-            return True
-        else:
-            print(f'❌ Erro ao finalizar: {finish_response.json()}')
-            return False
-        
-    except Exception as e:
-        print(f'❌ Erro: {e}')
-        import traceback
-        traceback.print_exc()
-        return False
+name: Postar Vídeos
+
+on:
+  schedule:
+    # Terça, Quinta e Sábado às 15h BR = 18h UTC
+    - cron: '0 18 * * 2,4,6'
+  workflow_dispatch:
+
+jobs:
+  postar:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout código
+      uses: actions/checkout@v3
+    
+    - name: Configurar Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Instalar dependências
+      run: |
+        pip install -r requirements.txt
+        sudo apt-get update
+        sudo apt-get install -y ffmpeg
+    
+    - name: Executar automação de vídeos
+      env:
+        FB_ACCESS_TOKEN: ${{ secrets.FB_ACCESS_TOKEN }}
+        FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+      run: |
+        python automacao_videos.py
